@@ -1,0 +1,158 @@
+html {
+  margin: 0;
+  padding: 0 0;
+}
+body {
+  background: black;
+  color: white;
+  font-size: 15px;
+  margin: 0 10px;
+  padding: 0;
+  font-family: sans-serif;
+}
+body > section {
+  max-width: 640px;
+  margin: 0 auto;
+  display: none;
+}
+input[name='tab'] {
+  display: none;
+}
+input:checked + section {
+  display: block;
+}
+
+a {
+  color: white;
+}
+nav {
+  text-align: right;
+  margin-top: 10px;
+}
+h1 {
+  font-size: 15px;
+  text-align: center;
+  border-bottom: 1px solid white;
+  padding: 0 0 5px;
+  margin: 5px 0 5px;
+}
+h2 {
+  margin: 15px 0 5px;
+  padding: 0;
+  font-size: 12px;
+  text-align: left;
+}
+table {
+  margin: 10px auto;
+  padding: 0;
+  border-collapse: collapse;
+  width: 100%;
+}
+tr {
+  border-bottom: 1px solid #333;
+}
+thead th {
+  text-align: left;
+  color: #AAA;
+  font-size: 12px;
+  white-space: nowrap;
+}
+th, td {
+  padding: 2px 2px;
+  line-height: 1.1;
+}
+.room-time {
+  width: 8ex;
+}
+.room-id {
+  width: 10ex;
+}
+
+td.room-time {
+  font-size: 10px;
+}
+td.room-id {
+}
+output[name='room-id'] {
+  white-space: nowrap;
+  font-weight: bold;
+  font-size: 16px;
+}
+.room-category {
+  font-size: 14px;
+}
+
+td.room-note {
+  font-size: 10px;
+  word-break: break-all;
+}
+.room-host {
+}
+.room-message {
+  font-size: 10px;
+}
+.room-slots {
+  color: yellow;
+  font-weight: bold;
+}
+[data-closed=true] .room-id {
+  color: #666;
+}
+[data-closed=true] .room-slots {
+  color: inherit !important;
+}
+[data-abandoned=true] {
+  color: #666;
+}
+[data-abandoned=true] .room-slots {
+  color: inherit !important;
+}
+#room-template {
+  display: none;
+}
+
+.wishlist-note {
+  width: 14ex;
+  font-weight: bold;
+}
+.wishlist-authors ul {
+  margin: 0;
+  padding: 0;
+}
+.wishlist-authors li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: inline;
+}
+.wishlist-authors li:not(:nth-child(1)):before {
+  content: ",";
+}
+.wishlist-authors .energized {
+  font-weight: bold;
+  color: greenyellow;
+}
+#connect-status {
+  font-size: x-small;
+  vertical-align: middle;
+}
+#connect-status.success {
+  color: #30ff3d;
+}
+#connect-status.danger {
+  color: #ff3000;
+}
+
+#about pre, #about p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-family: sans-serif;
+  width: 100%;
+}
+#about pre {
+  white-space: pre-wrap;
+}
+
+.text-center {
+  text-align: center;
+}

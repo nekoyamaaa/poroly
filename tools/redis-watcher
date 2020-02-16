@@ -1,0 +1,6 @@
+#!/bin/sh
+URI_OPT="$REDIS_URL"
+if [ -n "$URI_OPT" ] ; then
+  URI_OPT="-u $URI_OPT"
+fi
+stdbuf -o0 redis-cli $@ $URI_OPT --verbose --csv psubscribe '__keyevent*__:*' 'newroom'

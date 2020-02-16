@@ -1,0 +1,3 @@
+[submodule "my"]
+	path = my
+	url = https://gist.github.com/51913e0bbaa494576b355e806b1b43c3.git

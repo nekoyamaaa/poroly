@@ -1,0 +1,6 @@
+[Service]
+WorkingDirectory=%h/board
+EnvironmentFile=%h/board/.env
+ExecStart=python3 discordbot.py
+SyslogIdentifier=dancer.board
+SyslogLevel=err

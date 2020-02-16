@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width">
+  <title>求人票</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% if use_cdn  %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js" integrity="sha256-A4JwlcDvqO4JXpvEtvWY1RH8JAEMu5W21wP8GUXLUNs=" crossorigin="anonymous"></script>
+  {% else %}<script src="{{ url_for('static', filename='js/reconnecting-websocket.min.js') }}"></script>{% endif %}
+  <script>
+    window.boardServer = '{{ url_for('frontend', _external=True, _scheme='') }}';
+    window.expireSec = {{ expire_sec|int }};
+  </script>
+  <script src="{{ url_for('static', filename='js/application.js') }}"></script>
+</head>
+<body>
+  <noscript>情報を受け取るにはjavascriptを有効にしてください。</noscript>
+  <input type="radio" checked name="tab" id="switcher_main">
+  <section id="main">
+    <nav>
+      <label for="switcher_about">[?]</label>
+    </nav>
+    <h1>
+      現在募集中の部屋
+      <span id="connect-status">●</span>
+    </h1>
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="room-time">時間</th>
+          <th class="room-id">部屋詳細</th>
+          <th class="room-note">ホスト/コメント</th>
+        </tr>
+      </thead>
+      <tbody>
+      <tr id="room-template">
+        <td class="room-time">
+          <time name="room-time"></time>
+        </td>
+        <td class="room-id">
+          <span class="room-category">
+            <output name="room-type"></output>
+            <output name="room-difficulty"></output>
+            <output name="room-rule"></output>
+          </span>
+          <output name="room-id"></output>
+        </td>
+        <td class="room-note">
+          <span class="room-host">
+            <output name="room-owner"></output>
+            <output name="room-guild"></output>
+          </span><br />
+          <output name="room-message"></output>
+          <output class="room-slots" name="room-slots"></output>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </section>
+  <input type="radio" name="tab" id="switcher_about">
+  <section id="about">
+    <nav>
+      <label for="switcher_main">[X]</label>
+    </nav>
+    <h1>ヘルプ</h1>
+    <h2>閲覧</h2>
+    <p>部屋情報が更新されると自動で表示されます。ページのリロードは必要ありません。<br />
+    ページ上部の●は掲示板サーバーとの接続状況を表しています。接続前は白、接続成功は緑、接続が切れると赤になります。再接続は自動で行われますが、長時間つながらない場合はページ全体を再読込してみてください。</p>
+    <h2>投稿</h2>
+    <p>投稿はDiscordを通して行えます。「マルチ募集」チャンネルにマルチ部屋のIDとクエスト内容を書き込んでください。<br />
+    ホスト欄にはDiscordのサーバー名とユーザー名がそのまま表示されます。(ユーザー名またはDiscordサーバー内の「ニックネーム」)</p>
+    <h2>編集</h2>
+    <p>新しいメッセージを投稿すると古い情報を上書きします。<br />
+    メッセージを編集してもかまいません。ただし古すぎるメッセージは拾えないので、新しい部屋の募集は新しくメッセージを投稿することをおすすめします。</p>
+    <h2>削除</h2>
+    <p>Discord上でメッセージを削除するか、投稿から一定時間が経過したものは自動で消去されます。</p>
+    <h2>インストール</h2>
+    <p>(Discordサーバー管理者の方向け)<br />
+    自分のDiscordサーバーから投稿できるようにするにはボットを招待してください。チャンネルは自動で作られますが、既に同じ名前の物がある場合はそちらが使われます。<br />
+    {% if invite_url %}
+    <a href="{{ invite_url }}">ボットを招待</a>
+    {% endif %}
+    </p>
+  </section>
+</body>
+</html>
