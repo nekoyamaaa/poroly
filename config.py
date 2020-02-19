@@ -18,10 +18,12 @@ class Config:
     BOARD_EXPIRE_SEC = 120
 
     BOARD_BACKEND_SECRET = os.environ.get('BACKEND_SECRET')
+    BOARD_SOCKET_URL = os.environ.get('BOARD_SOCKET_URL')
     BOARD_PLUGIN = os.environ.get('BOARD_PLUGIN', 'plugins.example')
 
     DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN')
     DISCORD_MASTER = os.environ.get('DISCORD_MASTER')
+    DISCORD_INVITE_URL = os.environ.get('DISCORD_INVITE_URL')
 
 class ProductionConfig(Config):
     BOARD_USE_JSCDN = True
@@ -49,7 +51,9 @@ def is_gunicorn():
     return 'gunicorn' in os.environ.get('SERVER_SOFTWARE', '')
 
 def is_heroku():
-    """very buggy check.  Use only for non-critical actions."""
+    """Check whether the server is running through heroku ecosystem.
+    It returns True on both heroku server and `heroku local`.
+    WARNING: It's very buggy check.  Use only for non-critical actions."""
     return 'FOREMAN_WORKER_NAME' in os.environ
 
 def flask_logging_config():

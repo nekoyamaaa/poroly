@@ -4,6 +4,19 @@ import discord
 
 from my.discordmod import Client
 
+class DefaultParser:
+    def parse_content(self, content, message=None, bot=None):
+        if getattr(bot, 'logger', None):
+            bot.logger.error('Parser is empty.  All messages will be ignored!')
+        return
+
+    def report_for(self, action, obj=None):
+        if obj is None:
+            obj = {}
+        if action == "saved" and obj.get('message'):
+            return "`{}`として投稿しました".format(obj.get('message'))
+
+
 class Bot(Client):
     REACTION = '✅'
     REQUIRED_PERMISSIONS = [
@@ -13,12 +26,26 @@ class Bot(Client):
     ]
     CHANNEL_NAME = 'マルチ募集'
 
+    def load_plugin(self, plugin):
+        self._parser = plugin.Parser()
+        self.description = plugin.__doc__
+        self.logger.debug('Plugin %s loaded.', self.parser.__class__)
+
     async def on_ready(self):
+        if not getattr(self, 'board_url', None):
+            raise ValueError('board_url is not set')
+
         if self.master:
             await self.master.create_dm()
             await self.cleanup(self.master.dm_channel)
+
         for guild in self.guilds:
             await self.prepare(guild)
+        self.logger.info(
+            'Successfully logged in as %s.  Invitation: %s',
+            self.user.name,
+            self.invite_url
+        )
 
     async def on_guild_join(self, guild):
         self.logger.info('Bot joined to %s', guild)
@@ -26,6 +53,11 @@ class Bot(Client):
 
     async def on_message(self, message):
         if not self.is_target(message):
+            return
+
+        if (self.user.mentioned_in(message) or self.role_mentioned_in(message)) and \
+           'url' in message.content.lower():
+            await self.usage(message=message)
             return
 
         data = self.extract_data(message)
@@ -44,7 +76,7 @@ class Bot(Client):
 
     async def on_board_save(self, message, saved):
         await message.add_reaction(self.REACTION)
-        completed_message = self.user_notification("saved", saved)
+        completed_message = self.report_for("saved", saved)
         if completed_message:
             await self.reply(message, completed_message)
 
@@ -67,11 +99,41 @@ class Bot(Client):
         await after.remove_reaction(self.REACTION, self.user)
         await self.on_message(after)
 
+    async def usage(self, message=None, channel=None):
+        if not message and not channel:
+            raise ValueError('either message or channel required')
+        if not channel:
+            channel = message.channel
+        board_url = getattr(self, 'board_url', None)
+        # Although check existence in `on_ready`, for more stability
+        if board_url:
+            msg = '\n'.join([
+                '掲示板サーバーのURLは',
+                '<{0}>',
+                'このDiscordサーバーの募集だけ見る場合は',
+                '<{0}?guild={1}>',
+            ]).format(
+                self.board_url, channel.guild.id
+            )
+        else:
+            msg = '掲示板サーバーのURLが設定されていません。'
+            msg += 'お手数ですがボットの管理者までお知らせください。'
+
+        if message:
+            await self.reply(message, msg)
+        else:
+            await channel.send(msg)
+
+    @property
+    def parser(self):
+        return getattr(self, '_parser', None) or DefaultParser()
+
     def extract_data(self, message):
-        result = self.parse_content(message.content, message=message)
+        content = message.clean_content.replace('@' + self.user.name, '')
+        result = self.parser.parse_content(content, message=message, bot=self)
         if not result:
             return None
-        if result.get('warning'):
+        if result.get('error'):
             return result
 
         result.update({
@@ -79,26 +141,25 @@ class Bot(Client):
                 'id': message.author.id,
                 'name': message.author.display_name,
             },
-            'guild': message.channel.guild.name,
+            'guild': {
+                'id': message.channel.guild.id,
+                'name': message.channel.guild.name
+            },
             'time': message.edited_at or message.created_at
         })
         return result
 
-    def parse_content(self, content, message=None):
-        raise NotImplementedError()
-
-    def user_notification(self, action, obj=None):
-        if action == "saved" and obj.get('message'):
-            return "`{}`として投稿しました".format(obj.get('message'))
+    def report_for(self, action, obj=None):
+        return self.parser.report_for(action, obj)
 
     @property
     def channel_name(self):
-        # TODO: i18n
+        # TODO: i18n or make configurable
         return self.CHANNEL_NAME
 
     @property
     def description(self):
-        return (self._description or "").format(
+        return (getattr(self, '_description', None) or "").format(
             channel=self.channel_name,
             reaction=self.REACTION
         )
@@ -107,18 +168,31 @@ class Bot(Client):
     def description(self, value):
         self._description = str(value) if value else None
 
+    def role_mentioned_in(self, message):
+        for role in message.role_mentions:
+            if role in message.channel.guild.me.roles:
+                return True
+        return False
+
     def is_target(self, message):
         if message.author.bot or message.author.system:
             return False
 
+        if message.mentions and not self.user.mentioned_in(message):
+            self.logger.debug('The message is for others')
+            return False
+        if message.role_mentions and not self.role_mentioned_in(message):
+            self.logger.debug('The message is for other roles')
+            return False
+
         if not hasattr(message.channel, 'guild') or not message.channel.guild:
-            self.logger.info('%s does not have guild.', message.channel)
+            self.logger.debug('%s does not have guild.', message.channel)
             return False
 
         return message.channel.name == self.channel_name
 
     async def prepare(self, guild):
-        channel = discord.utils.find(lambda c: c.name == self.CHANNEL_NAME, guild.channels)
+        channel = discord.utils.find(lambda c: c.name == self.channel_name, guild.channels)
         if channel:
             return
         try:
@@ -134,3 +208,4 @@ class Bot(Client):
             )
 
         await channel.send(self.description)
+        await self.usage(channel=channel)

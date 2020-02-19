@@ -3,32 +3,107 @@ import datetime
 import json
 import logging
 import time
+import importlib
 
 import redis
+
+from .exceptions import PluginError
+
+class DefaultValidator:
+    def run(self, data, cleaned_by_others=None):
+        """Expected data scheme.
+        Text are silently trimmed if longer than maxlength.
+        {
+            'owner': {
+                'id': (str) unique ID
+                'name': (str, optional)
+            }
+            'time': (int or datetime)
+            'guild': {
+                'id': (str) unique ID
+                'name': (str, optional)
+            }
+            'message': (str, optional)
+        }
+        """
+        cleaned = {}
+
+        # owner / guild: Based on discord specs
+        max_length = {
+            'owner': 32,
+            'guild': 100,
+            'message': 30,
+        }
+        for attr in ('owner', 'guild'):
+            attr_id = data[attr]['id']
+            if isinstance(attr_id, int):
+                attr_id = str(attr_id)
+            if not attr_id:
+                raise ValueError('%s.id must not be empty.' % attr)
+            cleaned[attr] = {'id': str(attr_id)}
+
+            attr_displayname = data[attr].get('name')
+            if attr_displayname:
+                cleaned[attr]['name'] = str(attr_displayname)[0:max_length[attr]]
+
+        time_data = data.get('time')
+        if not time_data:
+            time_data = time.time()
+        elif isinstance(time_data, str):
+            pass
+        elif isinstance(time_data, datetime.datetime):
+            if time_data.tzinfo:
+                time_data = time_data.timestamp()
+            else:
+                time_data = calendar.timegm(time_data.utctimetuple())
+        try:
+            cleaned['time'] = int(time_data)
+        except ValueError:
+            raise ValueError('time is not a valid time') from None
+
+        message = data.get('message')
+        if message:
+            cleaned['message'] = str(message)[0:max_length['message']]
+
+        return cleaned
 
 class BoardManager:
     CHANNEL = 'newroom'
     DEFAULT_CONFIG = {
         'expire_sec': 120,
-        'prefix': 'room'
+        'prefix': 'room',
     }
 
     KEY_GLUE = ':'
 
-    def __init__(self, config, logger=None):
-        self.redis = redis.from_url(config.get('REDIS_URL'))
+    def __init__(self, redis_url, validator, config=None, logger=None):
+        self.logger = logger or logging.getLogger(__name__)
+        self.redis = redis.from_url(redis_url)
         try:
             self.redis.config_get('notify-keyspace-events')
             self.notifications_available = True
         except:
             self.notifications_available = False
         self.notifications_available = False
-        self.config = {}
-        for k, v in self.DEFAULT_CONFIG.items():
-            self.config[k] = config.get('BOARD_'+k.upper()) or v
-        self.logger = logger or logging.getLogger(__name__)
+        self.config = dict(self.DEFAULT_CONFIG)
+        if config:
+            for k, v in config.items():
+                if v:
+                    # Do not override with None
+                    self.config[k] = v
+
+        self.validators = []
+        self.add_validator(DefaultValidator)
+        self.add_validator(validator)
+
         self.expire_sec = self.config['expire_sec']
         self.prefix = self.config['prefix']
+
+    def add_validator(self, cls):
+        if not isinstance(cls, type):
+            raise TypeError('cls must be a class, but %s given' % type(cls))
+        self.validators.append(cls())
+        self.logger.debug('Validator %s added.', cls)
 
     def get_all(self):
         return [
@@ -95,6 +170,8 @@ class BoardManager:
         else:
             values.append('*')
 
+        values = [str(v) if isinstance(v, int) else v for v in values]
+
         return self.KEY_GLUE.join(values)
 
     def split_key(self, key):
@@ -103,53 +180,15 @@ class BoardManager:
         return result
 
     def validate(self, data):
-        """Expected data scheme.
-        Text are silently trimmed if longer than maxlength.
-        {
-            'owner': {
-                'id': (str) unique ID
-                'name': (str, optional, maxlength=15)
-            }
-            'time': (int or datetime)
-            'guild': (str, optional, maxlength=30)
-            'message': (str, optional, maxlength=30)
-        }
-        """
         cleaned = {}
+        for validator in self.validators:
+            cleaned.update(validator.run(data, cleaned))
 
-        cleaned['owner'] = {
-            'id': str(data['owner']['id'])
-        }
-        if not cleaned['owner']['id']:
-            raise ValueError('owner.id must not be empty.')
-        owner_name = data['owner'].get('name')
-        if owner_name:
-            cleaned['owner']['name'] = str(owner_name)[0:15]
-
-        if data['guild']:
-            cleaned['guild'] = str(data['guild'])[0:30]
-
-        time_data = data.get('time')
-        if not time_data:
-            time_data = time.time()
-        elif isinstance(time_data, str):
-            pass
-        elif isinstance(time_data, datetime.datetime):
-            if time_data.tzinfo:
-                time_data = time_data.timestamp()
-            else:
-                time_data = calendar.timegm(time_data.utctimetuple())
         try:
-            cleaned['time'] = int(time_data)
-        except ValueError:
-            raise ValueError('time is not a valid time') from None
-
-        message = data.get('message')
-        if message:
-            cleaned['message'] = str(message)[0:30]
-
-        if self.user_validate:
-            cleaned.update(self.user_validate(data))
+           cleaned['id']
+           cleaned['owner']['id']
+        except KeyError:
+            raise PluginError('Required keys migging.  It seems that Plugin removed them or did not handle them at all.')
 
         return cleaned
 

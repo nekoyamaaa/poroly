@@ -11,7 +11,7 @@ ROOM_REGEX = re.compile(
 )
 
 class Validator:
-    def user_validate(self, data):
+    def run(self, data, *args, **kwargs):
         """Validate data dict.  Basic attributes (owner, guild and time)
         are validated in base class"""
         cleaned = {}
@@ -22,7 +22,7 @@ class Validator:
         return cleaned
 
 class Parser:
-    def user_notification(self, action, obj=None):
+    def report_for(self, action, obj=None, *args, **kwargs):
         """Message to user on each actions.
         If returned value is falsey, no messages will be sent"""
         if action == "saved":
@@ -31,7 +31,7 @@ class Parser:
                 "ID: `{id}` / コメント: `{msg}`"
             ).format(id=obj['id'], msg=obj.get('message', '(なし)'))
 
-    def parse_content(self, content, message=None):
+    def parse_content(self, content, *args, **kwargs):
         """Parse message content and return game-specific info"""
         matched = ROOM_REGEX.search(content)
         if not matched:

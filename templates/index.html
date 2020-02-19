@@ -9,7 +9,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js" integrity="sha256-A4JwlcDvqO4JXpvEtvWY1RH8JAEMu5W21wP8GUXLUNs=" crossorigin="anonymous"></script>
   {% else %}<script src="{{ url_for('static', filename='js/reconnecting-websocket.min.js') }}"></script>{% endif %}
   <script>
-    window.boardServer = '{{ url_for('frontend', _external=True, _scheme='') }}';
+    window.boardServer = '{{ socket_url }}';
     window.expireSec = {{ expire_sec|int }};
   </script>
   <script src="{{ url_for('static', filename='js/application.js') }}"></script>
@@ -68,8 +68,9 @@
     <p>部屋情報が更新されると自動で表示されます。ページのリロードは必要ありません。<br />
     ページ上部の●は掲示板サーバーとの接続状況を表しています。接続前は白、接続成功は緑、接続が切れると赤になります。再接続は自動で行われますが、長時間つながらない場合はページ全体を再読込してみてください。</p>
     <h2>投稿</h2>
-    <p>投稿はDiscordを通して行えます。「マルチ募集」チャンネルにマルチ部屋のIDとクエスト内容を書き込んでください。<br />
-    ホスト欄にはDiscordのサーバー名とユーザー名がそのまま表示されます。(ユーザー名またはDiscordサーバー内の「ニックネーム」)</p>
+    <p>投稿はDiscordを通して行えます。「マルチ募集」チャンネルにマルチ部屋のIDとクエスト内容を書き込んでください。反応するキーワードはボットによって異なります。詳しくはチャンネル内のボットからのお知らせを読んでください。</p>
+    <p>
+    ホスト欄にはDiscordのサーバー名とユーザー名<small>(またはDiscordサーバー内の「ニックネーム」)</small>が表示されます。</p>
     <h2>編集</h2>
     <p>新しいメッセージを投稿すると古い情報を上書きします。<br />
     メッセージを編集してもかまいません。ただし古すぎるメッセージは拾えないので、新しい部屋の募集は新しくメッセージを投稿することをおすすめします。</p>
@@ -80,6 +81,8 @@
     自分のDiscordサーバーから投稿できるようにするにはボットを招待してください。チャンネルは自動で作られますが、既に同じ名前の物がある場合はそちらが使われます。<br />
     {% if invite_url %}
     <a href="{{ invite_url }}">ボットを招待</a>
+    {% else %}
+    ボットの招待リンクは非公開です。掲示板の管理者にお尋ねください。
     {% endif %}
     </p>
   </section>

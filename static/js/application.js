@@ -3,6 +3,7 @@
 
   var connection, template, tbody, connectStatus;
   var EXPIRE_IN_MSEC = 2 * 60 * 1000;
+  var NAME_MAX_LENGTH = 16;
 
   class Room {
     constructor(values) {
@@ -10,7 +11,7 @@
       this.fields = [
         'time', 'owner', 'guild',
         'id', 'message',
-        'type', 'difficulty',
+        'type', 'difficulty', 'rule',
         'slots'
       ];
       for (let name of this.fields) {
@@ -45,9 +46,9 @@
           value = d;
           break;
         case 'owner':
-          if ( value.name == undefined ) {
+        case 'guild':
+          if ( value.name == undefined )
             value.name = '';
-          }
           break;
       }
       return value;
@@ -71,12 +72,13 @@
           break;
         case 'owner':
           value = value.name;
-          if (value.length > 8)
-            value = value.slice(0, 8) + "…";
+          if (value.length > NAME_MAX_LENGTH)
+            value = value.slice(0, NAME_MAX_LENGTH) + "…";
           break;
         case 'guild':
-          if (value.length > 15)
-            value = value.slice(0, 15) + "…";
+          value = value.name;
+          if (value.length > NAME_MAX_LENGTH)
+            value = value.slice(0, NAME_MAX_LENGTH) + "…";
           value = '@' + value;
           break;
       }
@@ -89,6 +91,7 @@
     render() {
       var row = document.getElementById(this.html_id);
       var newcomer = false;
+      var match = null;
       if ( ! row ) {
         newcomer = true;
         row = template.cloneNode(true);
@@ -98,8 +101,24 @@
         if ( this.values[name] === undefined ) continue;
         let target = row.querySelector(`[name='room-${name}']`);
         target.textContent = this.humanize(name);
-        if ( name == 'time')
-          target.setAttribute('datetime', this.values.time.toISOString());
+        switch(name){
+          case 'owner':
+          case 'guild':
+            target.setAttribute('data-id', this.values[name].id);
+            target.setAttribute('title', this.values[name].name);
+            break;
+          case 'time':
+            target.setAttribute('datetime', this.values.time.toISOString());
+            break;
+        }
+        if ( window.filter && window.filter.has(name) ) {
+          if ( window.filter.get(name) == ( this.values[name].id || this.values[name] ) ) {
+            match = true;
+          }
+        }
+      }
+      if ( window.filter ) {
+          row.setAttribute('data-filter', match ? 'match' : 'unmatch');
       }
       row.setAttribute('data-closed', this.is_closed());
       row.setAttribute('data-expired', this.is_expired());
@@ -136,6 +155,12 @@
     connection.onopen = function(evt) {
       console.info('Successfully connected to Board server.');
       connectStatus.className = 'success';
+      if ( ! window.polling ) {
+        window.polling = setInterval(function(){
+          if ( connection.readyState == WebSocket.OPEN )
+            connection.send('ping');
+        }, 30*1000);
+      }
     };
     connection.onclose = function(evt) {
       connectStatus.className = 'danger';
@@ -168,6 +193,10 @@
     };
   }
   document.addEventListener("DOMContentLoaded", function(){
+    if ( window.location.search ) {
+      window.filter = new URLSearchParams(window.location.search);
+      document.body.className += " filtered";
+    }
     if (window.boardServer)
       connect(window.boardServer);
     template = document.getElementById('room-template');

@@ -9,7 +9,7 @@ class PubSubServer:
 
     def __init__(self, app, manager, logger=None):
         self.logger = logger or logging.getLogger(__name__)
-        self.backend_secret = app.config.get('backend_secret')
+        self.backend_secret = app.config.get('BOARD_BACKEND_SECRET')
         self.manager = manager
         self.clients = list()
         if self.manager.notifications_available:
@@ -21,9 +21,31 @@ class PubSubServer:
             self.manager.CHANNEL: self.newroom_handler,
         })
         self.pubsub_thread = None
+        self.status = 'initial'
+
+    def log_socket(self, level, prefix, ws):
+        """Leave log message about a WebSocket client"""
+        if not self.logger.isEnabledFor(level):
+            return
+
+        if ws.environ:
+            info = []
+            for attr in ['REMOTE_ADDR', 'HTTP_ORIGIN', 'HTTP_USER_AGENT']:
+                value = ws.environ.get(attr)
+                if not value:
+                    info.append("-")
+                elif " " in value:
+                    info.append(f'"{value}"')
+                else:
+                    info.append(value)
+            info = " ".join(info)
+        else:
+            info = "Unknown"
+        self.logger.log(level, '%s %s', prefix, info)
 
     def register(self, client):
         """Register a WebSocket connection for Redis updates."""
+        self.log_socket(logging.INFO, 'New client', client)
         self.clients.append(client)
 
     def send(self, client, data):
@@ -32,10 +54,12 @@ class PubSubServer:
         try:
             client.send(data)
         except WebSocketError:
-            self.logger.error('WSError on %s', client)
+            self.log_socket(logging.DEBUG, "WebSocketError", client)
             try:
+                client.close()
                 self.clients.remove(client)
-            except ValueError:
+            except:
+                # Already removed
                 pass
         except:
             # TODO: Gather error examples and add better handling
@@ -81,4 +105,5 @@ class PubSubServer:
         self.send_all(msg)
 
     def start(self):
+        self.status = 'running'
         self.pubsub_thread = self.pubsub.run_in_thread(sleep_time=1)

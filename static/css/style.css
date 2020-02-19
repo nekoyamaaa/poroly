@@ -107,6 +107,9 @@ td.room-note {
 [data-abandoned=true] .room-slots {
   color: inherit !important;
 }
+body.filtered tr[data-filter='unmatch'] {
+  display: none;
+}
 #room-template {
   display: none;
 }

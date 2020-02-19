@@ -1,39 +1,52 @@
 import gevent
+from flask.helpers import url_for
 from flask import Flask, render_template, request, abort, make_response, jsonify
 from flask_sockets import Sockets
 
 import config
 import board
-import board.server
+from board.manager import BoardManager
+from board.server  import PubSubServer
 
 config.flask_logging_config()
 
 app = Flask(__name__)
 app.config.from_object(config.get_option(app.env))
 board_config = app.config.get_namespace('BOARD_')
-app.logger.info('Load %s config, debug mode: %s', app.env, app.debug)
+app.logger.debug('Load %s config, debug mode: %s', app.env, app.debug)
 
-Bot, BoardManager = board.load_plugin(board_config['plugin'])
+plugin = board.check_plugin(board_config['plugin'])
 
-manager = BoardManager(app.config)
-board_server = board.server.PubSubServer(app, manager)
+manager = BoardManager(app.config['REDIS_URL'], plugin.Validator, board_config)
+board_server = PubSubServer(app, manager)
+SOCKET_PATH = '/room'
 
 @app.route('/')
 def frontend():
     opts = {
         'use_cdn': board_config.get('use_jscdn', False),
         'expire_sec': manager.expire_sec,
-        'invite_url': app.config.get('DISCORD_INVITE_URL')
+        'invite_url': app.config.get('DISCORD_INVITE_URL'),
     }
+    socket_url = board_config.get('socket_url')
+    if not socket_url and board_server.status == 'running':
+        socket_url = url_for('fakesocketend', _external=True, _scheme='')
+
+    if socket_url:
+        opts['socket_url'] = socket_url
+    else:
+        app.logger.error('WebSocketServer is not running but socket_url is not configured.')
+        if not app.debug:
+            abort(503)
 
     return render_template(
         'index.html',
         **opts
     )
 
-@app.route('/health')
-def health():
-    return ('', 204)
+@app.route(SOCKET_PATH)
+def fakesocketend():
+    abort(406)
 
 def backend():
     if board_server.backend_secret != request.headers.get('X-Authorization-Token'):
@@ -42,7 +55,7 @@ def backend():
     if not data:
         abort(400, 'Not a valid JSON')
     try:
-        return board_server.save(data)
+        return manager.save(data)
     except ValueError as ex:
         app.logger.warning(str(ex))
         if ex.args:
@@ -63,10 +76,6 @@ def catcher(error):
 
 def socketend(ws, *args, **kwargs):
     """Handle WebSockets requests"""
-    try:
-        app.logger.info('New client from %s, %s "%s"', request.remote_addr, ws.origin, request.user_agent)
-    except:
-        pass
     board_server.register(ws)
     board_server.send(ws, manager.get_all_as_json())
 
@@ -77,6 +86,6 @@ def socketend(ws, *args, **kwargs):
 if config.is_gunicorn():
     board_server.start()
     sockets = Sockets(app)
-    sockets.add_url_rule('/', 'socketend', socketend)
+    sockets.add_url_rule(SOCKET_PATH, 'socketend', socketend)
 else:
     app.logger.warning('WebSockets is not opened.')
