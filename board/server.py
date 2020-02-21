@@ -30,7 +30,7 @@ class PubSubServer:
 
         if ws.environ:
             info = []
-            for attr in ['REMOTE_ADDR', 'HTTP_ORIGIN', 'HTTP_USER_AGENT']:
+            for attr in ['X_FORWARDED_FOR', 'REMOTE_ADDR', 'HTTP_ORIGIN', 'HTTP_USER_AGENT']:
                 value = ws.environ.get(attr)
                 if not value:
                     info.append("-")

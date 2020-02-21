@@ -7,12 +7,30 @@ import config
 from board.manager import BoardManager
 from board.server  import PubSubServer
 
+
 config.flask_logging_config()
+
 
 app = Flask(__name__)
 app.config.from_object(config.get_option(app.env))
 board_config = app.config.get_namespace('BOARD_')
 app.logger.debug('Load %s config, debug mode: %s', app.env, app.debug)
+
+try:
+    from flask_cache_buster import CacheBuster
+    cache_buster = CacheBuster()
+    cache_buster.register_cache_buster(app)
+except Exception as ex:
+    app.logger.warning('Could not setup CacheBuster: %s', repr(ex))
+
+proxy_fix_num = app.config.get('PROXY_FIX')
+if proxy_fix_num > 0:
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxy_fix_num, x_host=proxy_fix_num)
+    app.logger.info('Set proxy_fix with %s', proxy_fix_num)
+else:
+    app.logger.info('PROXY_FIX was ignored')
+del proxy_fix_num
 
 manager = BoardManager(app.config['REDIS_URL'], board_config)
 board_server = PubSubServer(app, manager)

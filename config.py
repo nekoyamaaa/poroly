@@ -10,6 +10,7 @@ class Config:
     DEBUG = os.environ.get('DEBUG', False)
     TESTING = False
     REDIS_URL = os.environ['REDIS_URL']
+    PROXY_FIX = int(os.environ.get('PROXY_FIX', 0))
 
     # Deliver javascripts from jscdn.com
     BOARD_USE_JSCDN = False
@@ -51,7 +52,7 @@ def is_gunicorn():
     return 'gunicorn' in os.environ.get('SERVER_SOFTWARE', '')
 
 def is_heroku():
-    """Check whether the server is running through heroku ecosystem.
+    """Check whether the server is running through heroku command.
     It returns True on both heroku server and `heroku local`.
     WARNING: It's very buggy check.  Use only for non-critical actions."""
     return 'FOREMAN_WORKER_NAME' in os.environ
