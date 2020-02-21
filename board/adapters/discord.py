@@ -4,19 +4,6 @@ import discord
 
 from my.discordmod import Client
 
-class DefaultParser:
-    def parse_content(self, content, message=None, bot=None):
-        if getattr(bot, 'logger', None):
-            bot.logger.error('Parser is empty.  All messages will be ignored!')
-        return
-
-    def report_for(self, action, obj=None):
-        if obj is None:
-            obj = {}
-        if action == "saved" and obj.get('message'):
-            return "`{}`として投稿しました".format(obj.get('message'))
-
-
 class Bot(Client):
     REACTION = '✅'
     REQUIRED_PERMISSIONS = [
@@ -25,11 +12,6 @@ class Bot(Client):
         'add_reactions'
     ]
     CHANNEL_NAME = 'マルチ募集'
-
-    def load_plugin(self, plugin):
-        self._parser = plugin.Parser()
-        self.description = plugin.__doc__
-        self.logger.debug('Plugin %s loaded.', self.parser.__class__)
 
     async def on_ready(self):
         if not getattr(self, 'board_url', None):
@@ -67,6 +49,7 @@ class Bot(Client):
             await self.reply(message, data['error'])
         else:
             try:
+                data = self.manager.validate(data)
                 response = self.manager.save(data)
             except ValueError as ex:
                 await self.reply(message, str(ex))
@@ -76,7 +59,7 @@ class Bot(Client):
 
     async def on_board_save(self, message, saved):
         await message.add_reaction(self.REACTION)
-        completed_message = self.report_for("saved", saved)
+        completed_message = self.manager.report_for("saved", saved)
         if completed_message:
             await self.reply(message, completed_message)
 
@@ -124,13 +107,9 @@ class Bot(Client):
         else:
             await channel.send(msg)
 
-    @property
-    def parser(self):
-        return getattr(self, '_parser', None) or DefaultParser()
-
     def extract_data(self, message):
         content = message.clean_content.replace('@' + self.user.name, '')
-        result = self.parser.parse_content(content, message=message, bot=self)
+        result = self.manager.parse(content, message)
         if not result:
             return None
         if result.get('error'):
@@ -148,9 +127,6 @@ class Bot(Client):
             'time': message.edited_at or message.created_at
         })
         return result
-
-    def report_for(self, action, obj=None):
-        return self.parser.report_for(action, obj)
 
     @property
     def channel_name(self):
@@ -209,3 +185,14 @@ class Bot(Client):
 
         await channel.send(self.description)
         await self.usage(channel=channel)
+
+    @property
+    def description(self):
+        return (
+            self.manager.decription +
+            """\n掲示板サーバーへの書き込みが完了するとボットがリアクション{reaction}をつけてリプライでもお知らせします。
+部屋番号が含まれない投稿や他人宛のメンションは無視します。"""
+        ).format(
+            channel=self.channel_name,
+            reaction=self.REACTION
+        )

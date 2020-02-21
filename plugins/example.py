@@ -1,4 +1,4 @@
-"""部屋番号とクエスト内容を投稿してください。掲示板サーバーへの書き込みが完了するとボットがリアクション{reaction}をつけてリプライでもお知らせします。部屋番号は半角数字でお願いします。
+"""部屋番号とクエスト内容を投稿してください。部屋番号は半角数字でお願いします。
 例)
 1234567 真ミド
 0987654 アギト練習
@@ -10,8 +10,8 @@ ROOM_REGEX = re.compile(
     r'^(?P<id>\d{3}[-]?\d{4})\s*(?P<message>.*)$', re.ASCII
 )
 
-class Validator:
-    def run(self, data, *args, **kwargs):
+class Parser:
+    def validate(self, data, *args, **kwargs):
         """Validate data dict.  Basic attributes (owner, guild and time)
         are validated in base class"""
         cleaned = {}
@@ -21,7 +21,6 @@ class Validator:
 
         return cleaned
 
-class Parser:
     def report_for(self, action, obj=None, *args, **kwargs):
         """Message to user on each actions.
         If returned value is falsey, no messages will be sent"""

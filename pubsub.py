@@ -4,7 +4,6 @@ from flask import Flask, render_template, request, abort, make_response, jsonify
 from flask_sockets import Sockets
 
 import config
-import board
 from board.manager import BoardManager
 from board.server  import PubSubServer
 
@@ -15,9 +14,7 @@ app.config.from_object(config.get_option(app.env))
 board_config = app.config.get_namespace('BOARD_')
 app.logger.debug('Load %s config, debug mode: %s', app.env, app.debug)
 
-plugin = board.check_plugin(board_config['plugin'])
-
-manager = BoardManager(app.config['REDIS_URL'], plugin.Validator, board_config)
+manager = BoardManager(app.config['REDIS_URL'], board_config)
 board_server = PubSubServer(app, manager)
 SOCKET_PATH = '/room'
 
@@ -55,6 +52,7 @@ def backend():
     if not data:
         abort(400, 'Not a valid JSON')
     try:
+        data = manager.validate(data)
         return manager.save(data)
     except ValueError as ex:
         app.logger.warning(str(ex))

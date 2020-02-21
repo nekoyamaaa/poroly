@@ -4,8 +4,7 @@ import os
 from my.discordmod import setup_logging
 import config
 
-import board
-from board.bot import Bot
+from board.adapters.discord import Bot
 from board.manager import BoardManager
 
 BOT_LABEL = 'board'
@@ -23,15 +22,12 @@ app_config = {
     }
 }
 
-plugin = board.check_plugin(app_config['board']['plugin'])
-
 logger = setup_logging(BOT_LABEL)
 
 bot = Bot(__file__, debug=DEBUG, logger=logger, name=BOT_LABEL)
-bot.load_plugin(plugin)
 bot.master = app_config['discord']['master']
 
-bot.manager = BoardManager(REDIS_URL, plugin.Validator, app_config['board'])
+bot.manager = BoardManager(REDIS_URL, app_config['board'])
 bot.board_url = app_config['board']['url']
 
 bot.run(app_config['discord']['token'])

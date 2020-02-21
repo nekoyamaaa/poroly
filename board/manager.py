@@ -9,8 +9,28 @@ import redis
 
 from .exceptions import PluginError
 
+class DefaultPlugin:
+    def parse_content(self, content, *args, **kwargs):
+        logging.getLogger('board.manager').error(
+            'Parser is empty.  All messages will be ignored!'
+        )
+        return
+
+    def report_for(self, action, obj=None):
+        if obj is None:
+            obj = {}
+        if action == "saved" and obj.get('message'):
+            return "`{}`として投稿しました".format(obj.get('message'))
+
+    def validate(self, data, cleaned_by_others=None):
+        logging.getLogger('board.manager').error(
+            'Validator is empty.  All extended data will be ignored!'
+        )
+        return {}
+
 class DefaultValidator:
-    def run(self, data, cleaned_by_others=None):
+    @staticmethod
+    def validate(data, cleaned_by_others=None):
         """Expected data scheme.
         Text are silently trimmed if longer than maxlength.
         {
@@ -76,7 +96,7 @@ class BoardManager:
 
     KEY_GLUE = ':'
 
-    def __init__(self, redis_url, validator, config=None, logger=None):
+    def __init__(self, redis_url, config, logger=None):
         self.logger = logger or logging.getLogger(__name__)
         self.redis = redis.from_url(redis_url)
         try:
@@ -94,16 +114,26 @@ class BoardManager:
 
         self.validators = []
         self.add_validator(DefaultValidator)
-        self.add_validator(validator)
+        self.load_plugin(config['plugin'])
 
         self.expire_sec = self.config['expire_sec']
         self.prefix = self.config['prefix']
 
-    def add_validator(self, cls):
-        if not isinstance(cls, type):
-            raise TypeError('cls must be a class, but %s given' % type(cls))
-        self.validators.append(cls())
-        self.logger.debug('Validator %s added.', cls)
+    def load_plugin(self, plugin):
+        if isinstance(plugin, str):
+            plugin = importlib.import_module(plugin)
+        self._parser = plugin.Parser()
+        self.add_validator(self._parser)
+        if not plugin.__doc__:
+            self.logger.warning('%s has no description.', plugin.__class__)
+        self.description = plugin.__doc__
+        self.logger.debug('Plugin %s loaded.', plugin.__class__)
+
+    def add_validator(self, instance):
+        if isinstance(instance, type):
+            instance = instance()
+        self.validators.append(instance)
+        self.logger.debug('Validator %s added.', instance.__class__)
 
     def get_all(self):
         return [
@@ -129,7 +159,12 @@ class BoardManager:
                 self.redis.publish(self.CHANNEL, msg)
 
     def save(self, data):
-        data = self.validate(data)
+        try:
+           data['id']
+           data['owner']['id']
+        except KeyError:
+            raise PluginError('Required keys are missing.  It seems that Plugin removed them or did not handle them at all.')
+
         owner_keys = self.redis.keys(
             self.generate_key(data, fields='owner')
         )
@@ -182,15 +217,26 @@ class BoardManager:
     def validate(self, data):
         cleaned = {}
         for validator in self.validators:
-            cleaned.update(validator.run(data, cleaned))
-
-        try:
-           cleaned['id']
-           cleaned['owner']['id']
-        except KeyError:
-            raise PluginError('Required keys migging.  It seems that Plugin removed them or did not handle them at all.')
-
+            cleaned.update(validator.validate(data, cleaned))
         return cleaned
+
+    @property
+    def parser(self):
+        return getattr(self, '_parser', None) or DefaultParser()
+
+    def parse(self, content, *args, **kwargs):
+        return self.parser.parse_content(content, *args, **kwargs)
+
+    def report_for(self, action, obj=None):
+        return self.parser.report_for(action, obj)
+
+    @property
+    def description(self):
+        return (getattr(self, '_description', None) or "")
+
+    @description.setter
+    def description(self, value):
+        self._description = str(value) if value else None
 
     @staticmethod
     def _decode_message(message):
