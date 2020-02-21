@@ -11,7 +11,7 @@ from .exceptions import PluginError
 
 class DefaultPlugin:
     def parse_content(self, content, *args, **kwargs):
-        logging.getLogger('board.manager').error(
+        logging.getLogger(__name__).error(
             'Parser is empty.  All messages will be ignored!'
         )
         return
@@ -23,7 +23,7 @@ class DefaultPlugin:
             return "`{}`として投稿しました".format(obj.get('message'))
 
     def validate(self, data, cleaned_by_others=None):
-        logging.getLogger('board.manager').error(
+        logging.getLogger(__name__).error(
             'Validator is empty.  All extended data will be ignored!'
         )
         return {}
@@ -55,7 +55,11 @@ class DefaultValidator:
             'message': 30,
         }
         for attr in ('owner', 'guild'):
-            attr_id = data[attr]['id']
+            attr_values = data.get(attr)
+            if not attr_values:
+                raise ValueError('%s.id must not be empty.' % attr)
+            attr_id = attr_values.get('id')
+
             if isinstance(attr_id, int):
                 attr_id = str(attr_id)
             if not attr_id:
