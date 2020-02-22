@@ -154,7 +154,10 @@ class Bot(Client):
         if message.author.bot or message.author.system:
             return False
 
-        if message.mentions and not self.user.mentioned_in(message):
+        # Even if the message is not in マルチ募集
+        if self.user.mentioned_in(message):
+            return True
+        if message.mentions:
             self.logger.debug('The message is for others')
             return False
         if message.role_mentions and not self.role_mentioned_in(message):
@@ -179,7 +182,7 @@ class Bot(Client):
                 guild, guild.owner
             )
             await guild.owner.send(
-                '権限不足でサーバー「{guild}」にチャンネルを作れませんでした。招待をやり直してください。 <{url}>'.format(
+                '権限不足でサーバー「{guild}」にチャンネルを作れませんでした。今の状態でもボットに＠を飛ばせば反応しますが、専用チャンネルが必要な場合はボットをキックして招待をやり直してください。 <{url}>'.format(
                     guild=guild.name, url=self.invite_url)
             )
 
@@ -189,7 +192,7 @@ class Bot(Client):
     @property
     def description(self):
         return (
-            self.manager.decription +
+            self.manager.description +
             """\n掲示板サーバーへの書き込みが完了するとボットがリアクション{reaction}をつけてリプライでもお知らせします。
 部屋番号が含まれない投稿や他人宛のメンションは無視します。"""
         ).format(
