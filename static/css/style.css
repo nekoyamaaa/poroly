@@ -5,7 +5,7 @@ html {
 body {
   background: black;
   color: white;
-  font-size: 15px;
+  font-size: 12px;
   margin: 0 10px;
   padding: 0;
   font-family: sans-serif;
@@ -30,7 +30,7 @@ nav {
   margin-top: 10px;
 }
 h1 {
-  font-size: 15px;
+  font-size: 125%;
   text-align: center;
   border-bottom: 1px solid white;
   padding: 0 0 5px;
@@ -39,7 +39,7 @@ h1 {
 h2 {
   margin: 15px 0 5px;
   padding: 0;
-  font-size: 12px;
+  font-size: 100%;
   text-align: left;
 }
 table {
@@ -54,7 +54,6 @@ tr {
 thead th {
   text-align: left;
   color: #AAA;
-  font-size: 12px;
   white-space: nowrap;
 }
 th, td {
@@ -65,31 +64,31 @@ th, td {
   width: 8ex;
 }
 .room-id {
-  width: 10ex;
+  width: 12ex;
 }
 
 td.room-time {
-  font-size: 10px;
+  font-size: 83%;
 }
 td.room-id {
 }
 output[name='room-id'] {
   white-space: nowrap;
   font-weight: bold;
-  font-size: 16px;
+  font-size: 130%;
 }
 .room-category {
-  font-size: 14px;
+  font-size: 115%;
 }
 
 td.room-note {
-  font-size: 10px;
+  font-size: 90%;
   word-break: break-all;
 }
 .room-host {
 }
 .room-message {
-  font-size: 10px;
+  font-size: 90%;
 }
 .room-slots {
   color: yellow;
@@ -148,7 +147,7 @@ body.filtered tr[data-filter='unmatch'] {
 
 #about pre, #about p {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: 100%;
   font-family: sans-serif;
   width: 100%;
 }

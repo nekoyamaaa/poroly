@@ -22,7 +22,7 @@
       return 'room-' + this.values.id;
     }
     is_closed() {
-      return this.values.slots == 0;
+      return this.values.slots === 0;
     }
     is_expired() {
       return this.values.time !== undefined && (Date.now() - this.values.time) > EXPIRE_IN_MSEC;
@@ -31,7 +31,7 @@
       return ! this.is_closed() && ! this.is_expired();
     }
     clean(name, value) {
-      if ( value === undefined ) return value;
+      if ( value == null ) return null;
       switch(name) {
         case 'id':
           value = value.toString();
@@ -63,6 +63,8 @@
         case 'slots':
           if ( value == 0 ) {
             value = '〆';
+          } else if ( ! value ) {
+            value = '';
           } else {
             value = `@${value}`;
           }
