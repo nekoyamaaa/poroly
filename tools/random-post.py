@@ -24,6 +24,7 @@ for _ in range(5):
     guilds.append({'id': random_id(48), 'name': random_name(32)})
 
 types = ['ミド', 'ムム', 'マキュ']
+url = f"http://127.0.0.1:{os.environ.get('PORT', 8000)}/party"
 
 while True:
     data = {
@@ -38,7 +39,7 @@ while True:
         'type': random.choice(types)
     }
 
-    response = requests.post('http://127.0.0.1:8000/party', json=data, headers={'X-Authorization-Token': token})
+    response = requests.post(url, json=data, headers={'X-Authorization-Token': token})
     print(response.status_code, response.reason)
     try:
         print(response.json())
