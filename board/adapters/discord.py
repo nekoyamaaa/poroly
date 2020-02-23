@@ -185,9 +185,9 @@ class Bot(Client):
                 '権限不足でサーバー「{guild}」にチャンネルを作れませんでした。今の状態でもボットに＠を飛ばせば反応しますが、専用チャンネルが必要な場合はボットをキックして招待をやり直してください。 <{url}>'.format(
                     guild=guild.name, url=self.invite_url)
             )
-
-        await channel.send(self.description)
-        await self.usage(channel=channel)
+        if channel:
+            await channel.send(self.description)
+            await self.usage(channel=channel)
 
     @property
     def description(self):
