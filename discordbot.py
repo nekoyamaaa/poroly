@@ -4,12 +4,14 @@ import os
 from my.discordmod import setup_logging
 import config
 
+from distutils.util import strtobool
+
 from board.adapters.discord import Bot
 from board.manager import BoardManager
 
 BOT_LABEL = 'board'
 REDIS_URL = os.environ['REDIS_URL']
-DEBUG = os.environ.get('DEBUG', False)
+DEBUG = strtobool(os.environ.get('DEBUG') or "False")
 
 app_config = {
     'board': {

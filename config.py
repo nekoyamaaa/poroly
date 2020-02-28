@@ -4,10 +4,12 @@ import logging
 import logging.config
 import logging.handlers
 
+from distutils.util import strtobool
+
 class Config:
     """Configurations for flask app.
     See .env.example for details about environ values"""
-    DEBUG = os.environ.get('DEBUG', False)
+    DEBUG = strtobool(os.environ.get('DEBUG') or "False")
     TESTING = False
     REDIS_URL = os.environ['REDIS_URL']
     PROXY_FIX = int(os.environ.get('PROXY_FIX', 0))
