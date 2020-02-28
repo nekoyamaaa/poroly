@@ -1,0 +1,5 @@
+*
+!.gitignore
+!.env.gh-pages
+!index.html
+!static
