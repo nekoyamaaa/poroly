@@ -148,10 +148,15 @@
     var serverUrl;
     var scheme = "ws";
 
-    if (document.location.protocol === "https:") {
-      scheme += "s";
+    if ( endpoint.startsWith('//') ) {
+      if (document.location.protocol === "https:") {
+        scheme += "s";
+      }
+      serverUrl = scheme + ':' + endpoint;
+    } else {
+      serverUrl = endpoint;
     }
-    serverUrl = scheme + ':' + endpoint;
+    console.info('Connecting to', serverUrl);
     connection = new ReconnectingWebSocket(serverUrl);
 
     connection.onopen = function(evt) {
